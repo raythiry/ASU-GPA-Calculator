@@ -90,7 +90,11 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       white-space: pre-wrap;
     }
-  </style>
+  
+    option {
+      color: var(--asu-maroon);
+    }
+    </style>
 </head>
 <body>
   <h1>ABOR Core GPA Calculator</h1>
@@ -203,90 +207,94 @@
     function calculateGPA() {
       const inputs = document.querySelectorAll('select');
       const subjectTotals = {};
-      const subfieldResults = {};
-      const deficiencies = new Set();
 
       subjects.forEach(subject => {
         subjectTotals[subject.name] = { points: 0, count: 0 };
-        if (subject.subfields) {
-          subfieldResults[subject.name] = {};
-          subject.subfields.forEach(sub => {
-            subfieldResults[subject.name][sub.name] = { points: 0, count: 0 };
-          });
-        }
       });
 
       inputs.forEach(input => {
         const grade = input.value;
         if (grade && gradePoints.hasOwnProperty(grade)) {
-          const subjectName = subjects[parseInt(input.dataset.subject)].name;
+          const subjectIndex = parseInt(input.dataset.subject);
+          const subjectName = subjects[subjectIndex].name;
           subjectTotals[subjectName].points += gradePoints[grade];
           subjectTotals[subjectName].count += 1;
-
-          if (input.dataset.subfield !== undefined) {
-            const subfieldName = subjects[parseInt(input.dataset.subject)].subfields[parseInt(input.dataset.subfield)].name;
-            subfieldResults[subjectName][subfieldName].points += gradePoints[grade];
-            subfieldResults[subjectName][subfieldName].count += 1;
-          }
         }
       });
 
       let totalPoints = 0;
       let totalCount = 0;
       let output = '';
+      let deficiencyText = '';
+      const deficiencies = [];
 
       for (const subject in subjectTotals) {
-        if (subfieldResults[subject]) {
-          for (const sub in subfieldResults[subject]) {
-            const { points, count } = subfieldResults[subject][sub];
-            if (count > 0) {
-              const gpa = points / count;
-              output += `${sub} GPA: ${gpa.toFixed(2)}\n`;
-              if (gpa < 2.0) deficiencies.add(subject);
-            }
-          }
-        }
-
         const { points, count } = subjectTotals[subject];
         if (count > 0) {
           const gpa = points / count;
-          output += `${subject} GPA: ${gpa.toFixed(2)}\n`;
           totalPoints += points;
           totalCount += count;
-          if (gpa < 2.0) deficiencies.add(subject);
+
+          if (gpa < 2.0) {
+            deficiencies.push(subject);
+            output += `<span style="color: red;">${subject} GPA: ${gpa.toFixed(2)}</span>
+`;
+          } else {
+            output += `${subject} GPA: ${gpa.toFixed(2)}
+`;
+          }
         }
       }
 
       const coreGPA = totalCount > 0 ? (totalPoints / totalCount) : 0;
-      output += `\nTotal Core GPA: ${coreGPA.toFixed(2)}\n`;
+      output += `
+Total Core GPA: ${coreGPA.toFixed(2)}
+`;
 
       const gradeLevel = document.getElementById('gradeLevel').value;
-      let color = 'black';
+      let mainColor = 'black';
 
       if (coreGPA >= 3.4) {
-        output += `\nYou are admissible and may also be a great candidate for Barrett, The Honors College.\nLearn more: <a href="https://honors.asu.edu" target="_blank">honors.asu.edu</a>`;
-        color = 'green';
+        output += `
+You are admissible and may also be a great candidate for Barrett, The Honors College.
+Learn more: <a href="https://honors.asu.edu" target="_blank">honors.asu.edu</a>`;
+        mainColor = 'green';
       } else if (coreGPA >= 3.0) {
-        output += `\nYou are on track for assured admission to ASU.\nApply now: <a href="https://admission.asu.edu" target="_blank">admission.asu.edu</a>`;
-        color = 'green';
+        output += `
+You are on track for assured admission to ASU.
+Apply now: <a href="https://admission.asu.edu" target="_blank">admission.asu.edu</a>`;
+        mainColor = 'green';
       } else if (coreGPA >= 2.8) {
-        output += `\nYou're on track for admission consideration. We encourage you to apply: <a href="https://admission.asu.edu" target="_blank">admission.asu.edu</a>`;
-        color = '#996600';
+        output += `
+You're on track for admission consideration. We encourage you to apply: <a href="https://admission.asu.edu" target="_blank">admission.asu.edu</a>`;
+        mainColor = '#996600';
       } else {
-        output += `\nConsider MyPath2ASU: <a href="https://mypath2asu.asu.edu" target="_blank">mypath2asu.asu.edu</a>`;
-        color = 'red';
-      }
-
-      if (deficiencies.size > 0) {
-        if (deficiencies.has("Math") && deficiencies.has("Lab Science")) {
-          output += `\nNote: Admission is not possible with deficiencies in both math and lab science.`;
-        } else {
-          output += `\nYou have a deficiency in: ${[...deficiencies].join(", ")}. You may still be admissible.`;
+        if (
+          (gradeLevel === "Senior" && coreGPA < 2.5) ||
+          (gradeLevel === "Junior" && coreGPA < 2.0)
+        ) {
+          output += `
+Consider MyPath2ASU: <a href="https://mypath2asu.asu.edu" target="_blank">mypath2asu.asu.edu</a>`;
+          mainColor = 'red';
         }
       }
 
+      if (deficiencies.length > 0) {
+        if (deficiencies.includes("Math") && deficiencies.includes("Lab Science")) {
+          deficiencyText += `
+Note: Admission is not possible with deficiencies in both math and lab science.`;
+        } else {
+          deficiencyText += `
+You have a deficiency in: ${deficiencies.join(", ")}. You may still be admissible.`;
+        }
+        deficiencyText += `
+<span style="color: red;">Talk to your counselor or an ASU admissions advisor to explore your options — you may still qualify.</span>`;
+      }
+
       document.getElementById("results").style.display = "block";
-      document.getElementById("results").innerHTML = `<div style="color:${color}">${output}</div>`;
+      document.getElementById("results").innerHTML =
+        `<div style="color:${mainColor}">${output}</div>` +
+        (deficiencyText ? `<div style="color:red;">${deficiencyText}</div>` : '');
       document.getElementById("results").scrollIntoView({ behavior: 'smooth' });
     }
 
