@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ABOR Core GPA Calculator</title>
+  <style>
+    :root {
+      --asu-maroon: #8C1D40;
+      --asu-gold: #FFC627;
+      --bg-light: #ffffff;
+      --text-color: #333;
+    }
+    html, body {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-color);
+    }
+
+    h1 {
+      color: var(--asu-maroon);
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 1em;
+      background-color: var(--asu-gold);
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    h2, h3 {
+      color: var(--asu-maroon);
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    label {
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+      color: var(--asu-maroon);
+      font-size: 1rem;
+      display: block;
+      margin-top: 10px;
+    }
+
+    select {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      border-radius: 4px;
+      border: 1px solid #8C1D40;
+      font-family: Arial, sans-serif;
+    }
+
+    .subject {
+      background: #fffaf4;
+      padding: 16px;
+      margin-top: 20px;
+      border-left: 5px solid #FFC627;
+      border-radius: 8px;
+    }
+
+    button {
+      background-color: var(--asu-gold);
+      color: black;
+      font-size: 1.1rem;
+      padding: 12px 20px;
+      margin-top: 30px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #e6b800;
+    }
+
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 12px;
+      background: #f9f9f9;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>ABOR Core GPA Calculator</h1>
+  <p>This tool allows high school students to track progress toward admission at Arizona State University, even if you are currently in high school and can't enter grades for all required high school courses yet. If you have completed more than the minimum number of courses in any subject, enter the highest grades you earned.</p>
+  <p><strong>Required high school courses for admission:</strong></p>
+  <ul>
+    <li>4 years English language arts</li>
+    <li>4 years math (Algebra 1-2, geometry, Algebra 3-4 and an advanced math class for which Algebra 3-4 is a prerequisite)</li>
+    <li>3 years lab science, including one year each of Biology, Chemistry, and either Earth Science or Physics</li>
+    <li>2 years social studies, including one year of American History and one additional year (e.g., World History, Economics, or Government)</li>
+    <li>2 years of the same foreign language</li>
+    <li>1 year fine arts or two semesters of high school fine arts or Career and Technical Education (CTE)</li>
+  </ul>
+  <p><strong>In addition, students must:</strong></p>
+  <ul>
+    <li>Earn a high school diploma</li>
+    <li>Have a total core GPA of 3.0 or higher</li>
+    <li>Earn a GPA of 2.0 or higher in each subject area</li>
+    <li>Complete all required courses (one grade per semester)</li>
+  </ul>
+  <p>Students who do not meet all of these requirements may still be considered for admission. In some cases, ASU allows admission with one subject area deficiency — but not in both math and lab science. Some degree programs, such as engineering or nursing, may have higher academic requirements. For help understanding your options and staying on track, talk to your school counselor or an ASU admissions advisor.</p>
+
+  <form id="gpaForm">
+    <div class="subject">
+      <h2>Grade Level</h2>
+      <label for="gradeLevel">What is your current grade level?
+        <select id="gradeLevel" required>
+          <option value="">-- Select --</option>
+          <option value="Freshman">Freshman</option>
+          <option value="Sophomore">Sophomore</option>
+          <option value="Junior">Junior</option>
+          <option value="Senior">Senior</option>
+        </select>
+      </label>
+    </div>
+    <div id="subjects"></div>
+    <button type="button" onclick="calculateGPA()">Calculate GPA</button>
+  </form>
+  <div id="results" class="result" style="display: none;"></div>
+
+  <script>
+    const subjects = [
+      { name: 'English', semesters: 8 },
+      { name: 'Math', subfields: [
+        { name: 'Algebra I', semesters: 2 },
+        { name: 'Geometry', semesters: 2 },
+        { name: 'Algebra II', semesters: 2 },
+        { name: 'Advanced Math', semesters: 2 }
+      ]},
+      { name: 'Lab Science', subfields: [
+        { name: 'Biology', semesters: 2 },
+        { name: 'Chemistry', semesters: 2 },
+        { name: 'Physics or Earth Science', semesters: 2 }
+      ]},
+      { name: 'Social Studies', subfields: [
+        { name: 'American History', semesters: 2 },
+        { name: 'Other Social Studies', semesters: 2 }
+      ]},
+      { name: 'Second Language', semesters: 4 },
+      { name: 'Fine Arts/CTE', semesters: 2 }
+    ];
+
+    const gradePoints = { A: 4.0, B: 3.0, C: 2.0, D: 1.0, E: 0.0 };
+
+    function loadSubjects() {
+      const container = document.getElementById('subjects');
+      container.innerHTML = '';
+      subjects.forEach((subject, idx) => {
+        const div = document.createElement('div');
+        div.className = 'subject';
+        div.innerHTML = `<h2>${subject.name}</h2>`;
+
+        if (subject.subfields) {
+          subject.subfields.forEach((sub, subIdx) => {
+            div.innerHTML += `<h3>${sub.name}</h3>`;
+            for (let i = 0; i < sub.semesters; i++) {
+              div.innerHTML += `
+                <label>Semester ${i+1} Grade:
+                  <select name="${sub.name}" data-subject="${idx}" data-subfield="${subIdx}">
+                    <option value="">--</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                  </select>
+                </label>`;
+            }
+          });
+        } else {
+          for (let i = 0; i < subject.semesters; i++) {
+            div.innerHTML += `
+              <label>Semester ${i+1} Grade:
+                <select name="${subject.name}" data-subject="${idx}">
+                  <option value="">--</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
+                  <option value="E">E</option>
+                </select>
+              </label>`;
+          }
+        }
+
+        container.appendChild(div);
+      });
+    }
+
+    function calculateGPA() {
+      const inputs = document.querySelectorAll('select');
+      const subjectTotals = {};
+      const subfieldResults = {};
+      const deficiencies = new Set();
+
+      subjects.forEach(subject => {
+        subjectTotals[subject.name] = { points: 0, count: 0 };
+        if (subject.subfields) {
+          subfieldResults[subject.name] = {};
+          subject.subfields.forEach(sub => {
+            subfieldResults[subject.name][sub.name] = { points: 0, count: 0 };
+          });
+        }
+      });
+
+      inputs.forEach(input => {
+        const grade = input.value;
+        if (grade && gradePoints.hasOwnProperty(grade)) {
+          const subjectName = subjects[parseInt(input.dataset.subject)].name;
+          subjectTotals[subjectName].points += gradePoints[grade];
+          subjectTotals[subjectName].count += 1;
+
+          if (input.dataset.subfield !== undefined) {
+            const subfieldName = subjects[parseInt(input.dataset.subject)].subfields[parseInt(input.dataset.subfield)].name;
+            subfieldResults[subjectName][subfieldName].points += gradePoints[grade];
+            subfieldResults[subjectName][subfieldName].count += 1;
+          }
+        }
+      });
+
+      let totalPoints = 0;
+      let totalCount = 0;
+      let output = '';
+
+      for (const subject in subjectTotals) {
+        if (subfieldResults[subject]) {
+          for (const sub in subfieldResults[subject]) {
+            const { points, count } = subfieldResults[subject][sub];
+            if (count > 0) {
+              const gpa = points / count;
+              output += `${sub} GPA: ${gpa.toFixed(2)}\n`;
+              if (gpa < 2.0) deficiencies.add(subject);
+            }
+          }
+        }
+
+        const { points, count } = subjectTotals[subject];
+        if (count > 0) {
+          const gpa = points / count;
+          output += `${subject} GPA: ${gpa.toFixed(2)}\n`;
+          totalPoints += points;
+          totalCount += count;
+          if (gpa < 2.0) deficiencies.add(subject);
+        }
+      }
+
+      const coreGPA = totalCount > 0 ? (totalPoints / totalCount) : 0;
+      output += `\nTotal Core GPA: ${coreGPA.toFixed(2)}\n`;
+
+      const gradeLevel = document.getElementById('gradeLevel').value;
+      let color = 'black';
+
+      if (coreGPA >= 3.4) {
+        output += `\nYou are admissible and may also be a great candidate for Barrett, The Honors College.\nLearn more: <a href="https://honors.asu.edu" target="_blank">honors.asu.edu</a>`;
+        color = 'green';
+      } else if (coreGPA >= 3.0) {
+        output += `\nYou are on track for assured admission to ASU.\nApply now: <a href="https://admission.asu.edu" target="_blank">admission.asu.edu</a>`;
+        color = 'green';
+      } else if (coreGPA >= 2.8) {
+        output += `\nYou're on track for admission consideration. We encourage you to apply: <a href="https://admission.asu.edu" target="_blank">admission.asu.edu</a>`;
+        color = '#996600';
+      } else {
+        output += `\nConsider MyPath2ASU: <a href="https://mypath2asu.asu.edu" target="_blank">mypath2asu.asu.edu</a>`;
+        color = 'red';
+      }
+
+      if (deficiencies.size > 0) {
+        if (deficiencies.has("Math") && deficiencies.has("Lab Science")) {
+          output += `\nNote: Admission is not possible with deficiencies in both math and lab science.`;
+        } else {
+          output += `\nYou have a deficiency in: ${[...deficiencies].join(", ")}. You may still be admissible.`;
+        }
+      }
+
+      document.getElementById("results").style.display = "block";
+      document.getElementById("results").innerHTML = `<div style="color:${color}">${output}</div>`;
+      document.getElementById("results").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    document.addEventListener("DOMContentLoaded", loadSubjects);
+  </script>
+</body>
+</html>
